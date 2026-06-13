@@ -1,0 +1,67 @@
+[build]
+publish = "."
+command = ""
+
+[build.processing]
+
+  [build.processing.css]
+
+  [build.processing.html]
+
+  [build.processing.images]
+
+  [build.processing.js]
+
+[[redirects]]
+from = "/api/products/:id"
+to = "/.netlify/functions/products?id=:id"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/products"
+to = "/.netlify/functions/products"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/regions/:id"
+to = "/.netlify/functions/regions?id=:id"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/regions"
+to = "/.netlify/functions/regions"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/orders/:id"
+to = "/.netlify/functions/orders?id=:id"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/orders"
+to = "/.netlify/functions/orders"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/settings"
+to = "/.netlify/functions/settings"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/auth"
+to = "/.netlify/functions/auth"
+status = 200
+force = false
+
+[[redirects]]
+from = "/api/setup"
+to = "/.netlify/functions/setup"
+status = 200
+force = false
