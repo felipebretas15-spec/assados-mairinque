@@ -499,7 +499,7 @@
         listEl.innerHTML = filtered.map(o => {
             const si = STATUS_INFO[o.status_pedido];
             const items = Array.isArray(o.itens_pedido) ? o.itens_pedido : JSON.parse(o.itens_pedido || '[]');
-            const itemsText = items.map(i => `${i.qty}x ${i.name}`).join(', ');
+            const itemsText = items.map(i => `${i.qty}x ${i.nome || i.name}`).join(', ');
             return `<div class="order-card s${o.status_pedido}">
                 <div class="order-card-header">
                     <div><span class="order-num">Pedido #${pad(o.id_pedido)}</span><span class="order-time" style="margin-left:10px">${fmtDate(o.criado_em)}</span></div>
