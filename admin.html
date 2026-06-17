@@ -236,8 +236,8 @@
         <div class="tab-content" id="tab-produtos">
             <div class="card">
                 <div class="card-header"><h3>Cardápio de Produtos</h3><button class="btn btn-primary" onclick="openProductForm()">+ Novo Produto</button></div>
-                <table><thead><tr><th>Foto</th><th>Nome</th><th>Descrição</th><th>Preço</th><th>Ações</th></tr></thead>
-                <tbody id="productsTable"><tr><td colspan="5" class="empty-table">Carregando...</td></tr></tbody></table>
+                <table><thead><tr><th>Foto</th><th>Nome</th><th>Descrição</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody id="productsTable"><tr><td colspan="6" class="empty-table">Carregando...</td></tr></tbody></table>
             </div>
         </div>
 
@@ -619,22 +619,23 @@
     // ── PRODUCTS ────────────────────────────────────────────────────────────
     async function loadProducts() {
         try {
-            const products = await fetch('/api/products').then(r => r.json());
+            const products = await fetch('/api/products?all=1').then(r => r.json());
             renderProducts(products);
-        } catch { document.getElementById('productsTable').innerHTML = '<tr><td colspan="5" class="empty-table">Erro ao carregar.</td></tr>'; }
+        } catch { document.getElementById('productsTable').innerHTML = '<tr><td colspan="6" class="empty-table">Erro ao carregar.</td></tr>'; }
     }
 
     function renderProducts(products) {
         const tbody = document.getElementById('productsTable');
-        if (!products.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-table">Nenhum produto. Clique em "+ Novo Produto".</td></tr>'; return; }
+        if (!products.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-table">Nenhum produto. Clique em "+ Novo Produto".</td></tr>'; return; }
         tbody.innerHTML = products.map(p => `<tr>
             <td>${p.imagem ? `<img class="product-thumb" src="${p.imagem}" alt="${p.nome_produto}">` : `<div class="product-thumb-placeholder">🍗</div>`}</td>
             <td><strong>${p.nome_produto}</strong></td>
             <td style="color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.descricao || '—'}</td>
             <td><strong style="color:var(--primary)">${fmt(p.preco)}</strong></td>
+            <td><span class="status-badge" style="${p.ativo ? 'background:#e8f8ef;color:var(--success)' : 'background:#fce8e8;color:var(--danger)'}">${p.ativo ? '✓ Ativo' : '✕ Inativo'}</span></td>
             <td style="white-space:nowrap">
                 <button class="btn btn-outline" style="margin-right:6px" onclick='editProduct(${JSON.stringify(p)})'>Editar</button>
-                <button class="btn btn-danger" onclick="deleteProduct(${p.id_produto})">Excluir</button>
+                <button class="btn ${p.ativo ? 'btn-danger' : 'btn-success'}" onclick="toggleProduct(${p.id_produto}, ${!p.ativo})">${p.ativo ? 'Desativar' : 'Ativar'}</button>
             </td>
         </tr>`).join('');
     }
@@ -698,11 +699,11 @@
         finally { btn.disabled = false; btn.textContent = 'Salvar Produto'; }
     }
 
-    async function deleteProduct(id) {
-        if (!confirm('Excluir este produto?')) return;
-        await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
+    async function toggleProduct(id, ativo) {
+        if (!confirm(ativo ? 'Ativar este produto?' : 'Desativar este produto? Ele deixará de aparecer para os clientes.')) return;
+        await fetch(`/api/products?id=${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativo }) });
         loadProducts();
-        showToast('Produto excluído.');
+        showToast(ativo ? 'Produto ativado.' : 'Produto desativado.');
     }
 
     // ── REGIONS ─────────────────────────────────────────────────────────────
