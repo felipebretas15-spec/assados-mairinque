@@ -8,11 +8,12 @@ exports.handler = async (event) => {
     const body = event.body ? JSON.parse(event.body) : {};
 
     try {
-        // GET /api/products
+        // GET /api/products (?all=1 retorna inativos também, usado pelo admin)
         if (event.httpMethod === 'GET' && !id) {
-            const rows = await sql`
-                SELECT * FROM produtos WHERE ativo = true ORDER BY criado_em
-            `;
+            const includeInactive = event.queryStringParameters?.all === '1';
+            const rows = includeInactive
+                ? await sql`SELECT * FROM produtos ORDER BY criado_em`
+                : await sql`SELECT * FROM produtos WHERE ativo = true ORDER BY criado_em`;
             return ok(rows);
         }
 
@@ -35,6 +36,15 @@ exports.handler = async (event) => {
                 SET nome_produto=${nome_produto}, descricao=${descricao || null},
                     preco=${preco}, imagem=${imagem || null}
                 WHERE id_produto=${id} RETURNING *
+            `;
+            return ok(row);
+        }
+
+        // PATCH /api/products/:id - ativar/desativar produto
+        if (event.httpMethod === 'PATCH' && id) {
+            const { ativo } = body;
+            const [row] = await sql`
+                UPDATE produtos SET ativo=${ativo} WHERE id_produto=${id} RETURNING *
             `;
             return ok(row);
         }
