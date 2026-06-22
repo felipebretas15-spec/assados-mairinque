@@ -529,8 +529,6 @@
             regionName = sel.options[sel.selectedIndex].dataset.name;
             address = `${rua}, ${numero}${complemento ? ', ' + complemento : ''} — ${regionName} — CEP ${cep}`;
         }
-        const subtotal = getSubtotal();
-        const total = subtotal + deliveryFee;
         const obs = document.getElementById('custObs').value.trim();
         const trocoSim = document.getElementById('btnTrocoSim')?.classList.contains('active');
         const change = (selectedPayment === 'Dinheiro' && trocoSim) ? document.getElementById('changeAmount').value : '';
@@ -546,13 +544,19 @@
                 body: JSON.stringify({
                     tipo_pedido: deliveryMode, nome_cliente: name, telefone_cliente: phone,
                     endereco_cliente: address || null, nome_regiao: regionName || null,
-                    taxa_regiao: deliveryFee,
-                    itens_pedido: cart.map(i => ({ id: i.id, nome: i.name, qty: i.qty, preco: i.price })),
-                    subtotal, frete: deliveryFee, total, pagamento: selectedPayment,
+                    itens_pedido: cart.map(i => ({ id: i.id, qty: i.qty })),
+                    pagamento: selectedPayment,
                     troco: change ? parseFloat(change) : null, observacao: obs || null
                 })
             });
             const order = await resp.json();
+            if (!resp.ok) { showToast('⚠️ ' + (order.error || 'Erro ao salvar pedido.')); return; }
+
+            // Usa os valores recalculados e validados pelo servidor (não confia no cálculo do navegador).
+            const itensConfirmados = typeof order.itens_pedido === 'string' ? JSON.parse(order.itens_pedido) : order.itens_pedido;
+            const subtotal = Number(order.subtotal);
+            const frete = Number(order.frete);
+            const total = Number(order.total);
             const num = String(order.id_pedido).padStart(4, '0');
 
             let msg = `🍗 *NOVO PEDIDO #${num} — Assados Mairinque*\n\n`;
@@ -560,9 +564,9 @@
             msg += `📦 *Tipo:* ${deliveryMode === 'retirada' ? '🏪 Retirada no local' : '🚚 Entrega'}\n`;
             if (deliveryMode === 'entrega') { msg += `📍 *Região:* ${regionName}\n🏠 *Endereço:* ${address}\n`; }
             msg += `\n🛒 *Itens:*\n`;
-            cart.forEach(i => { msg += `• ${i.qty}x ${i.name} — ${fmt(i.price * i.qty)}\n`; });
+            itensConfirmados.forEach(i => { msg += `• ${i.qty}x ${i.nome} — ${fmt(i.preco * i.qty)}\n`; });
             msg += `\n💰 *Subtotal:* ${fmt(subtotal)}\n`;
-            if (deliveryFee) msg += `🚚 *Frete:* ${fmt(deliveryFee)}\n`;
+            if (frete) msg += `🚚 *Frete:* ${fmt(frete)}\n`;
             msg += `✅ *Total: ${fmt(total)}*\n\n💳 *Pagamento:* ${selectedPayment}`;
             if (selectedPayment === 'Dinheiro' && change) msg += ` (troco para ${fmt(change)})`;
             if (obs) msg += `\n\n📝 *Obs:* ${obs}`;
