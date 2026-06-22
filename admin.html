@@ -280,6 +280,11 @@
                     <h3 style="font-family:Oswald,sans-serif;color:var(--primary);margin:18px 0 14px;">Segurança</h3>
                     <div class="form-group"><label>Nova Senha do Painel</label><input type="password" id="cfg_password" placeholder="Deixe em branco para manter a atual"></div>
                 </div>
+                <div class="card">
+                    <h3 style="font-family:Oswald,sans-serif;color:var(--primary);margin-bottom:18px;">Manutenção</h3>
+                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Recomprime as fotos dos produtos já cadastrados (deixa o cardápio mais rápido para carregar). Pode rodar mais de uma vez sem problema.</p>
+                    <button class="btn btn-outline" id="optimizeImagesBtn" onclick="optimizeImages()">🖼️ Otimizar Fotos Antigas</button>
+                </div>
             </div>
             <button class="btn btn-success" style="padding:12px 36px;font-size:15px;" onclick="saveSettings()">💾 Salvar Configurações</button>
         </div>
@@ -708,6 +713,21 @@
             showToast('✓ Produto salvo!', true);
         } catch { showToast('⚠️ Erro ao salvar.'); }
         finally { btn.disabled = false; btn.textContent = 'Salvar Produto'; }
+    }
+
+    async function optimizeImages() {
+        const senha = prompt('Confirme a senha do painel para continuar:');
+        if (!senha) return;
+        const btn = document.getElementById('optimizeImagesBtn');
+        btn.disabled = true; btn.textContent = 'Otimizando...';
+        try {
+            const r = await fetch('/api/optimize-images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha }) });
+            const data = await r.json();
+            if (!r.ok) { showToast('⚠️ ' + (data.error || 'Erro ao otimizar.')); return; }
+            showToast(`✓ ${data.updated} de ${data.processed} foto(s) otimizada(s) (-${data.savedKB} KB)`, true);
+            loadProducts();
+        } catch { showToast('⚠️ Erro ao otimizar.'); }
+        finally { btn.disabled = false; btn.textContent = '🖼️ Otimizar Fotos Antigas'; }
     }
 
     async function toggleProduct(id, ativo) {

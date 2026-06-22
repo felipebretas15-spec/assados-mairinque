@@ -65,3 +65,9 @@ from = "/api/setup"
 to = "/.netlify/functions/setup"
 status = 200
 force = false
+
+[[redirects]]
+from = "/api/optimize-images"
+to = "/.netlify/functions/optimize-images"
+status = 200
+force = false
