@@ -1,5 +1,6 @@
+const bcrypt = require('bcryptjs');
 const Jimp = require('jimp');
-const { getSql, ok, err, optionsResponse } = require('./_db');
+const { getSql, ok, err, optionsResponse, handleError } = require('./_db');
 
 const MAX_WIDTH = 900;
 const JPEG_QUALITY = 80;
@@ -12,8 +13,10 @@ exports.handler = async (event) => {
     try {
         const { senha } = JSON.parse(event.body || '{}');
         const rows = await sql`SELECT valor FROM configuracoes WHERE chave = 'senha_admin'`;
-        const senhaAdmin = rows[0]?.valor || 'admin123';
-        if (senha !== senhaAdmin) return err('Senha incorreta', 401);
+        const stored = rows[0]?.valor || 'admin123';
+        const isHashed = /^\$2[aby]\$/.test(stored);
+        const valid = isHashed ? await bcrypt.compare(senha || '', stored) : senha === stored;
+        if (!valid) return err('Senha incorreta', 401);
 
         const produtos = await sql`SELECT id_produto, imagem FROM produtos WHERE imagem IS NOT NULL`;
 
@@ -41,6 +44,6 @@ exports.handler = async (event) => {
 
         return ok({ processed, updated, savedKB: Math.round(savedBytes / 1024) });
     } catch (e) {
-        return err(e.message);
+        return handleError(e);
     }
 };

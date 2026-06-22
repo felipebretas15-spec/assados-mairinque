@@ -1,4 +1,4 @@
-const { getSql, ok, okCached, err, optionsResponse } = require('./_db');
+const { getSql, ok, okCached, err, optionsResponse, handleError } = require('./_db');
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
@@ -40,6 +40,6 @@ exports.handler = async (event) => {
 
         return err('Method not allowed', 405);
     } catch (e) {
-        return err(e.message);
+        return handleError(e);
     }
 };

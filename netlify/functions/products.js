@@ -1,4 +1,28 @@
-const { getSql, ok, okCached, err, optionsResponse } = require('./_db');
+const { getSql, ok, okCached, err, optionsResponse, ApiError, handleError } = require('./_db');
+
+const MAX_IMAGE_LENGTH = 2_000_000; // ~1.5MB de imagem decodificada
+
+function validateImage(imagem) {
+    if (imagem === undefined || imagem === null || imagem === '') return null;
+    if (typeof imagem !== 'string' || !/^data:image\/(png|jpe?g|webp|gif);base64,/.test(imagem)) {
+        throw new ApiError('Formato de imagem inválido.');
+    }
+    if (imagem.length > MAX_IMAGE_LENGTH) {
+        throw new ApiError('Imagem muito grande (máx. ~1.5MB). Escolha uma foto menor.');
+    }
+    return imagem;
+}
+
+function validateProduct({ nome_produto, preco }) {
+    if (!nome_produto || typeof nome_produto !== 'string' || !nome_produto.trim()) {
+        throw new ApiError('Nome do produto é obrigatório.');
+    }
+    const precoNum = Number(preco);
+    if (!Number.isFinite(precoNum) || precoNum <= 0) {
+        throw new ApiError('Preço inválido.');
+    }
+    return precoNum;
+}
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
@@ -22,9 +46,11 @@ exports.handler = async (event) => {
         // POST /api/products
         if (event.httpMethod === 'POST') {
             const { nome_produto, descricao, preco, imagem } = body;
+            const precoNum = validateProduct({ nome_produto, preco });
+            const imagemValida = validateImage(imagem);
             const [row] = await sql`
                 INSERT INTO produtos (nome_produto, descricao, preco, imagem)
-                VALUES (${nome_produto}, ${descricao || null}, ${preco}, ${imagem || null})
+                VALUES (${nome_produto.trim()}, ${descricao || null}, ${precoNum}, ${imagemValida})
                 RETURNING *
             `;
             return ok(row);
@@ -33,10 +59,12 @@ exports.handler = async (event) => {
         // PUT /api/products/:id
         if (event.httpMethod === 'PUT' && id) {
             const { nome_produto, descricao, preco, imagem } = body;
+            const precoNum = validateProduct({ nome_produto, preco });
+            const imagemValida = validateImage(imagem);
             const [row] = await sql`
                 UPDATE produtos
-                SET nome_produto=${nome_produto}, descricao=${descricao || null},
-                    preco=${preco}, imagem=${imagem || null}
+                SET nome_produto=${nome_produto.trim()}, descricao=${descricao || null},
+                    preco=${precoNum}, imagem=${imagemValida}
                 WHERE id_produto=${id} RETURNING *
             `;
             return ok(row);
@@ -59,6 +87,6 @@ exports.handler = async (event) => {
 
         return err('Method not allowed', 405);
     } catch (e) {
-        return err(e.message);
+        return handleError(e);
     }
 };

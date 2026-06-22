@@ -1,8 +1,17 @@
-const { getSql, ok, err, optionsResponse } = require('./_db');
+const bcrypt = require('bcryptjs');
+const { getSql, ok, err, optionsResponse, handleError } = require('./_db');
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
     if (event.httpMethod !== 'POST') return err('Method not allowed', 405);
+
+    // Protegido por token: só roda se SETUP_TOKEN estiver configurado nas
+    // variáveis de ambiente do site e o chamador enviar o mesmo valor.
+    // Sem SETUP_TOKEN configurado, o endpoint fica bloqueado por padrão.
+    const { token } = JSON.parse(event.body || '{}');
+    if (!process.env.SETUP_TOKEN || token !== process.env.SETUP_TOKEN) {
+        return err('Não autorizado', 401);
+    }
 
     const sql = getSql();
     try {
@@ -39,8 +48,9 @@ exports.handler = async (event) => {
                 valor TEXT
             )
         `;
+        const senhaPadraoHash = await bcrypt.hash('admin123', 10);
         await sql`
-            INSERT INTO configuracoes (chave, valor) VALUES ('senha_admin', 'admin123')
+            INSERT INTO configuracoes (chave, valor) VALUES ('senha_admin', ${senhaPadraoHash})
             ON CONFLICT (chave) DO NOTHING
         `;
         await sql`
@@ -65,6 +75,6 @@ exports.handler = async (event) => {
         `;
         return ok({ message: 'Banco iniciado com sucesso!' });
     } catch (e) {
-        return err(e.message);
+        return handleError(e);
     }
 };
