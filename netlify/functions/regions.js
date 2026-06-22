@@ -1,4 +1,4 @@
-const { getSql, ok, err, optionsResponse } = require('./_db');
+const { getSql, ok, okCached, err, optionsResponse } = require('./_db');
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
@@ -12,7 +12,7 @@ exports.handler = async (event) => {
             const rows = await sql`
                 SELECT * FROM regioes WHERE ativo = true ORDER BY nome_regiao
             `;
-            return ok(rows);
+            return okCached(rows);
         }
 
         if (event.httpMethod === 'POST') {

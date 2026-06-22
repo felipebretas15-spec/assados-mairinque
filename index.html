@@ -374,7 +374,7 @@
         const aberta = settings.loja_aberta !== 'false';
         grid.innerHTML = products.map(p => `
             <div class="product-card">
-                ${p.imagem ? `<img class="product-img" src="${p.imagem}" alt="${p.nome_produto}">` : `<div class="product-img-placeholder">🍗</div>`}
+                ${p.imagem ? `<img class="product-img" src="${p.imagem}" alt="${p.nome_produto}" loading="lazy" decoding="async">` : `<div class="product-img-placeholder">🍗</div>`}
                 <div class="product-info">
                     <div class="product-name">${p.nome_produto}</div>
                     <div class="product-desc">${p.descricao || ''}</div>

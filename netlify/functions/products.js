@@ -1,4 +1,4 @@
-const { getSql, ok, err, optionsResponse } = require('./_db');
+const { getSql, ok, okCached, err, optionsResponse } = require('./_db');
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
@@ -11,10 +11,12 @@ exports.handler = async (event) => {
         // GET /api/products (?all=1 retorna inativos também, usado pelo admin)
         if (event.httpMethod === 'GET' && !id) {
             const includeInactive = event.queryStringParameters?.all === '1';
-            const rows = includeInactive
-                ? await sql`SELECT * FROM produtos ORDER BY criado_em`
-                : await sql`SELECT * FROM produtos WHERE ativo = true ORDER BY criado_em`;
-            return ok(rows);
+            if (includeInactive) {
+                const rows = await sql`SELECT * FROM produtos ORDER BY criado_em`;
+                return ok(rows);
+            }
+            const rows = await sql`SELECT * FROM produtos WHERE ativo = true ORDER BY criado_em`;
+            return okCached(rows);
         }
 
         // POST /api/products
