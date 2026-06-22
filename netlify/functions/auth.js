@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { getSql, ok, err, optionsResponse, handleError } = require('./_db');
+const { getSql, ok, err, optionsResponse, handleError, signAdminToken } = require('./_db');
 
 const MAX_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
@@ -60,7 +60,7 @@ exports.handler = async (event) => {
             `;
         }
 
-        return ok({ ok: true });
+        return ok({ ok: true, token: signAdminToken() });
     } catch (e) {
         return handleError(e);
     }

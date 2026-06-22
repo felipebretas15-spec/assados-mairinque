@@ -1,4 +1,4 @@
-const { getSql, ok, okCached, err, optionsResponse, ApiError, handleError } = require('./_db');
+const { getSql, ok, okCached, err, optionsResponse, ApiError, handleError, requireAdmin } = require('./_db');
 
 const MAX_IMAGE_LENGTH = 2_000_000; // ~1.5MB de imagem decodificada
 
@@ -36,6 +36,7 @@ exports.handler = async (event) => {
         if (event.httpMethod === 'GET' && !id) {
             const includeInactive = event.queryStringParameters?.all === '1';
             if (includeInactive) {
+                requireAdmin(event);
                 const rows = await sql`SELECT * FROM produtos ORDER BY criado_em`;
                 return ok(rows);
             }
@@ -45,6 +46,7 @@ exports.handler = async (event) => {
 
         // POST /api/products
         if (event.httpMethod === 'POST') {
+            requireAdmin(event);
             const { nome_produto, descricao, preco, imagem } = body;
             const precoNum = validateProduct({ nome_produto, preco });
             const imagemValida = validateImage(imagem);
@@ -58,6 +60,7 @@ exports.handler = async (event) => {
 
         // PUT /api/products/:id
         if (event.httpMethod === 'PUT' && id) {
+            requireAdmin(event);
             const { nome_produto, descricao, preco, imagem } = body;
             const precoNum = validateProduct({ nome_produto, preco });
             const imagemValida = validateImage(imagem);
@@ -72,6 +75,7 @@ exports.handler = async (event) => {
 
         // PATCH /api/products/:id - ativar/desativar produto
         if (event.httpMethod === 'PATCH' && id) {
+            requireAdmin(event);
             const { ativo } = body;
             const [row] = await sql`
                 UPDATE produtos SET ativo=${ativo} WHERE id_produto=${id} RETURNING *
@@ -81,6 +85,7 @@ exports.handler = async (event) => {
 
         // DELETE /api/products/:id
         if (event.httpMethod === 'DELETE' && id) {
+            requireAdmin(event);
             await sql`UPDATE produtos SET ativo=false WHERE id_produto=${id}`;
             return ok({ ok: true });
         }

@@ -1,4 +1,4 @@
-const { getSql, ok, okCached, err, optionsResponse, handleError } = require('./_db');
+const { getSql, ok, okCached, err, optionsResponse, handleError, requireAdmin } = require('./_db');
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
@@ -16,6 +16,7 @@ exports.handler = async (event) => {
         }
 
         if (event.httpMethod === 'POST') {
+            requireAdmin(event);
             const { nome_regiao, taxa_entrega } = body;
             const [row] = await sql`
                 INSERT INTO regioes (nome_regiao, taxa_entrega)
@@ -25,6 +26,7 @@ exports.handler = async (event) => {
         }
 
         if (event.httpMethod === 'PUT' && id) {
+            requireAdmin(event);
             const { nome_regiao, taxa_entrega } = body;
             const [row] = await sql`
                 UPDATE regioes SET nome_regiao=${nome_regiao}, taxa_entrega=${taxa_entrega}
@@ -34,6 +36,7 @@ exports.handler = async (event) => {
         }
 
         if (event.httpMethod === 'DELETE' && id) {
+            requireAdmin(event);
             await sql`UPDATE regioes SET ativo=false WHERE id_regiao=${id}`;
             return ok({ ok: true });
         }

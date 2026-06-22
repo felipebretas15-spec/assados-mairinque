@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { getSql, ok, err, optionsResponse, handleError } = require('./_db');
+const { getSql, ok, err, optionsResponse, handleError, requireAdmin } = require('./_db');
 
 // Chaves internas que nunca devem ser expostas via GET (senha e contadores de bloqueio de login).
 const PRIVATE_KEYS = new Set(['senha_admin', 'auth_fail_count', 'auth_lock_until']);
@@ -17,6 +17,7 @@ exports.handler = async (event) => {
         }
 
         if (event.httpMethod === 'PUT') {
+            requireAdmin(event);
             const updates = JSON.parse(event.body || '{}');
             for (const [chave, valor] of Object.entries(updates)) {
                 if (valor !== undefined && valor !== null && valor !== '') {

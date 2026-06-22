@@ -1,4 +1,4 @@
-const { getSql, ok, err, optionsResponse, ApiError, handleError } = require('./_db');
+const { getSql, ok, err, optionsResponse, ApiError, handleError, requireAdmin } = require('./_db');
 
 exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') return optionsResponse();
@@ -10,6 +10,7 @@ exports.handler = async (event) => {
     try {
         // GET /api/orders
         if (event.httpMethod === 'GET' && !id) {
+            requireAdmin(event);
             const rows = await sql`SELECT * FROM pedidos ORDER BY criado_em DESC`;
             return ok(rows);
         }
@@ -65,6 +66,7 @@ exports.handler = async (event) => {
 
         // PUT /api/orders/:id  (atualizar status)
         if (event.httpMethod === 'PUT' && id) {
+            requireAdmin(event);
             const { status_pedido } = body;
             const [row] = await sql`
                 UPDATE pedidos SET status_pedido=${status_pedido}

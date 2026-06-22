@@ -397,6 +397,21 @@
         setInterval(refreshOrders, 30000);
     }
 
+    // Wrapper para chamadas administrativas: anexa o token de sessão e faz
+    // logout automático se o servidor responder 401 (token ausente/expirado).
+    async function adminFetch(url, options = {}) {
+        const token = sessionStorage.getItem('admin_token');
+        const r = await fetch(url, {
+            ...options,
+            headers: { ...(options.headers || {}), 'X-Admin-Token': token || '' },
+        });
+        if (r.status === 401) {
+            logout();
+            throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        return r;
+    }
+
     async function doLogin() {
         const pass = document.getElementById('loginPass').value;
         const btn = document.getElementById('loginBtn');
@@ -404,7 +419,8 @@
         try {
             const r = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ senha: pass }) });
             if (r.ok) {
-                sessionStorage.setItem('admin_auth', '1');
+                const data = await r.json();
+                sessionStorage.setItem('admin_token', data.token);
                 enterAdmin();
             } else {
                 document.getElementById('loginError').textContent = 'Senha incorreta. Tente novamente.';
@@ -419,14 +435,14 @@
     }
 
     function logout() {
-        sessionStorage.removeItem('admin_auth');
+        sessionStorage.removeItem('admin_token');
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('adminLayout').classList.remove('visible');
         document.getElementById('loginPass').value = '';
         document.getElementById('loginError').textContent = '';
     }
 
-    if (sessionStorage.getItem('admin_auth')) enterAdmin();
+    if (sessionStorage.getItem('admin_token')) enterAdmin();
 
     function showTab(name, el) {
         currentTab = name;
@@ -459,7 +475,7 @@
     // ── ORDERS ──────────────────────────────────────────────────────────────
     async function refreshOrders() {
         try {
-            const rows = await fetch('/api/orders').then(r => r.json());
+            const rows = await adminFetch('/api/orders').then(r => r.json());
             cachedOrders = rows;
             renderOrders();
             const pending = rows.filter(o => o.status_pedido == 1).length;
@@ -567,7 +583,7 @@
         const si = STATUS_INFO[newStatus];
         pendingAction = async () => {
             try {
-                const r = await fetch(`/api/orders?id=${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status_pedido: newStatus }) });
+                const r = await adminFetch(`/api/orders?id=${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status_pedido: newStatus }) });
                 const updated = await r.json();
                 const idx = cachedOrders.findIndex(o => o.id_pedido == orderId);
                 if (idx >= 0) cachedOrders[idx] = updated;
@@ -624,7 +640,7 @@
     // ── PRODUCTS ────────────────────────────────────────────────────────────
     async function loadProducts() {
         try {
-            const products = await fetch('/api/products?all=1').then(r => r.json());
+            const products = await adminFetch('/api/products?all=1').then(r => r.json());
             renderProducts(products);
         } catch { document.getElementById('productsTable').innerHTML = '<tr><td colspan="6" class="empty-table">Erro ao carregar.</td></tr>'; }
     }
@@ -707,7 +723,7 @@
         try {
             const url = id ? `/api/products?id=${id}` : '/api/products';
             const method = id ? 'PUT' : 'POST';
-            await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            await adminFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             await loadProducts();
             closeProductForm();
             showToast('✓ Produto salvo!', true);
@@ -732,7 +748,7 @@
 
     async function toggleProduct(id, ativo) {
         if (!confirm(ativo ? 'Ativar este produto?' : 'Desativar este produto? Ele deixará de aparecer para os clientes.')) return;
-        await fetch(`/api/products?id=${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativo }) });
+        await adminFetch(`/api/products?id=${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ativo }) });
         loadProducts();
         showToast(ativo ? 'Produto ativado.' : 'Produto desativado.');
     }
@@ -786,7 +802,7 @@
         try {
             const url = id ? `/api/regions?id=${id}` : '/api/regions';
             const method = id ? 'PUT' : 'POST';
-            await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome_regiao: name, taxa_entrega: parseFloat(fee) }) });
+            await adminFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome_regiao: name, taxa_entrega: parseFloat(fee) }) });
             await loadRegions();
             closeRegionForm();
             showToast('✓ Região salva!', true);
@@ -796,7 +812,7 @@
 
     async function deleteRegion(id) {
         if (!confirm('Excluir esta região?')) return;
-        await fetch(`/api/regions?id=${id}`, { method: 'DELETE' });
+        await adminFetch(`/api/regions?id=${id}`, { method: 'DELETE' });
         loadRegions();
         showToast('Região excluída.');
     }
@@ -835,7 +851,7 @@
         const newPass = document.getElementById('cfg_password').value;
         if (newPass) { updates.senha_admin = newPass; document.getElementById('cfg_password').value = ''; }
         try {
-            await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+            await adminFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
             showToast('✓ Configurações salvas!', true);
         } catch { showToast('⚠️ Erro ao salvar.'); }
     }
